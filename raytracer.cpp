@@ -4,7 +4,6 @@
 #include "ray.hpp"
 
 Vec3 ray_color(const Ray& r) {
-    // Check ray-sphere intersection
     Vec3 center(0, 0, -1);
     double radius = 0.5;
     Vec3 oc = r.origin - center;
@@ -15,14 +14,28 @@ Vec3 ray_color(const Ray& r) {
     double discriminant = b * b - 4 * a * c;
 
     if (discriminant > 0) {
-       return Vec3(0.5, 0.0, 1.0);
+        double t = (-b - std::sqrt(discriminant)) / (2.0 * a);
+        Vec3 point = r.at(t);
+        Vec3 normal = normalize(point - center);
+
+        // Simulated light direction (e.g., top-right front)
+        Vec3 light_dir = normalize(Vec3(1, 1, 1));
+
+        // Compute brightness based on angle
+        double brightness = std::max(0.0, dot(normal, light_dir));
+
+        // Shade color 
+        Vec3 base_color(0.5, 0.2, 1.0); // violet-blue
+        return brightness * base_color;
     }
 
-    // Background color
+    // Sky
     Vec3 unit_direction = normalize(r.direction);
     double t = 0.5 * (unit_direction.y + 1.0);
     return (1.0 - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
 }
+
+
 
 
 int main() {
