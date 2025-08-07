@@ -1,4 +1,4 @@
-# 🌈 Ray Tracer in C++
+# Ray Tracer in C++
 
 A simple CPU-based ray tracer written from scratch in modern C++.  
 This is a personal project to teach myself C++ and graphics programming from the ground up, without relying on prebuilt engines or libraries.  

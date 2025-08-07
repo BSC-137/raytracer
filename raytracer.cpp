@@ -1,9 +1,17 @@
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <ctime>
+
 #include "vec3.hpp"
 #include "ray.hpp"
 #include "sphere.hpp"
 #include "hittable_list.hpp"
+#include "camera.hpp"
+
+inline double random_double(){
+    return rand() / (RAND_MAX + 1.0);
+}
 
 Vec3 ray_color(const Ray& r, const Hittable& world) {
     HitRecord rec;
@@ -21,17 +29,18 @@ Vec3 ray_color(const Ray& r, const Hittable& world) {
 }
 
 int main() {
+    srand(time(0));
+
+    
     const int width = 400;
     const int height = 200;
+    int samples_per_pixel = 100;
 
     std::ofstream file("image.ppm");
     file << "P3\n" << width << " " << height << "\n255\n";
 
     // Camera setup
-    Vec3 origin(0, 0, 0);
-    Vec3 horizontal(4.0, 0.0, 0.0);
-    Vec3 vertical(0.0, 2.0, 0.0);
-    Vec3 lower_left_corner = origin - horizontal / 2 - vertical / 2 - Vec3(0, 0, 1);
+    Camera cam;
 
     // Scene setup
     HittableList world;
@@ -44,16 +53,21 @@ int main() {
     // Image generation loop
     for (int j = height - 1; j >= 0; --j) {
         for (int i = 0; i < width; ++i) {
-            double u = double(i) / (width - 1);
-            double v = double(j) / (height - 1);
+            Vec3 color(0, 0, 0);
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                double u = (i + random_double()) / (width - 1);
+                double v = (j + random_double()) / (height - 1);
+                Ray r = cam.get_ray(u, v);
+                color += ray_color(r, world);
+            }
+            color /= double(samples_per_pixel);
 
-            Ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);
-            Vec3 color = ray_color(r, world);
+            color = Vec3(sqrt(color.x), sqrt(color.y), sqrt(color.z));
+
 
             int ir = static_cast<int>(255.99 * color.x);
             int ig = static_cast<int>(255.99 * color.y);
             int ib = static_cast<int>(255.99 * color.z);
-
             file << ir << ' ' << ig << ' ' << ib << '\n';
         }
     }
