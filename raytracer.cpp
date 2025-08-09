@@ -2,72 +2,90 @@
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
 
 #include "vec3.hpp"
 #include "ray.hpp"
-#include "sphere.hpp"
+#include "hittable.hpp"
 #include "hittable_list.hpp"
+#include "sphere.hpp"
 #include "camera.hpp"
+#include "material.hpp"
+#include "lambertian.hpp"
+#include "metal.hpp"
+#include "dielectric.hpp"
 
-inline double random_double(){
-    return rand() / (RAND_MAX + 1.0);
+static inline double clamp(double x, double a, double b){
+    if (x < a) return a;
+    if (x > b) return b;
+    return x;
 }
 
-Vec3 ray_color(const Ray& r, const Hittable& world) {
+Vec3 ray_color(const Ray& r, const Hittable& world, int depth){
+    if (depth <= 0) return Vec3(0,0,0);
+
     HitRecord rec;
-    if (world.hit(r, 0.001, INFINITY, rec)) {
-        Vec3 light_dir = normalize(Vec3(1, 1, 1));
-        double brightness = std::max(0.0, dot(rec.normal, light_dir));
-        Vec3 base_color(0.6, 0.3, 1.0); // violet-blue
-        return brightness * rec.color;
+    if (world.hit(r, 0.001, std::numeric_limits<double>::infinity(), rec)) {
+        Ray scattered;
+        Vec3 attenuation;
+        if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+            return attenuation * ray_color(scattered, world, depth - 1);
+        }
+        return Vec3(0,0,0);
     }
 
-    // Sky gradient
-    Vec3 unit_direction = normalize(r.direction);
-    double t = 0.5 * (unit_direction.y + 1.0);
+    // background sky
+    Vec3 unit_dir = normalize(r.direction);
+    double t = 0.5 * (unit_dir.y + 1.0);
     return (1.0 - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
 }
 
-int main() {
-    srand(time(0));
+int main(){
+    srand((unsigned)time(0));
 
-    
+    // image
     const int width = 400;
     const int height = 200;
-    int samples_per_pixel = 100;
+    const int samples_per_pixel = 100;
+    const int max_depth = 25;
 
     std::ofstream file("image.ppm");
     file << "P3\n" << width << " " << height << "\n255\n";
 
-    // Camera setup
     Camera cam;
 
-    // Scene setup
+    // scene
     HittableList world;
-    Sphere sphere1(Vec3(0, 0, -1), 0.5, Vec3(0.6, 0.3, 1.0));   // violet
-    Sphere ground(Vec3(0, -100.5, -1), 100, Vec3(1, 01, 0.5)); // Ground as a giant sphere
 
-    world.add(&sphere1);
-    world.add(&ground);
+    auto ground_mat = std::make_shared<Lambertian>(Vec3(0.8, 0.8, 0.0));
+    auto center_mat = std::make_shared<Lambertian>(Vec3(0.1, 0.2, 0.5));
+    auto left_glass = std::make_shared<Dielectric>(1.5);
+    auto right_mtl  = std::make_shared<Metal>(Vec3(0.8, 0.6, 0.2), 0.0);
 
-    // Image generation loop
+    world.add(std::make_shared<Sphere>(Vec3(0,-100.5,-1), 100.0, ground_mat));
+    world.add(std::make_shared<Sphere>(Vec3(0,    0, -1),   0.5, center_mat));
+    world.add(std::make_shared<Sphere>(Vec3(-1,   0, -1),   0.5, left_glass));
+    // hollow glass sphere (optional interior)
+    world.add(std::make_shared<Sphere>(Vec3(-1,   0, -1),  -0.45, left_glass));
+    world.add(std::make_shared<Sphere>(Vec3( 1,   0, -1),   0.5, right_mtl));
+
+    // render
     for (int j = height - 1; j >= 0; --j) {
         for (int i = 0; i < width; ++i) {
-            Vec3 color(0, 0, 0);
+            Vec3 pixel(0,0,0);
             for (int s = 0; s < samples_per_pixel; ++s) {
-                double u = (i + random_double()) / (width - 1);
+                double u = (i + random_double()) / (width  - 1);
                 double v = (j + random_double()) / (height - 1);
                 Ray r = cam.get_ray(u, v);
-                color += ray_color(r, world);
+                pixel += ray_color(r, world, max_depth);
             }
-            color /= double(samples_per_pixel);
+            // average and gamma-correct (gamma=2)
+            pixel /= double(samples_per_pixel);
+            pixel = Vec3(std::sqrt(pixel.x), std::sqrt(pixel.y), std::sqrt(pixel.z));
 
-            color = Vec3(sqrt(color.x), sqrt(color.y), sqrt(color.z));
-
-
-            int ir = static_cast<int>(255.99 * color.x);
-            int ig = static_cast<int>(255.99 * color.y);
-            int ib = static_cast<int>(255.99 * color.z);
+            int ir = static_cast<int>(256 * clamp(pixel.x, 0.0, 0.999));
+            int ig = static_cast<int>(256 * clamp(pixel.y, 0.0, 0.999));
+            int ib = static_cast<int>(256 * clamp(pixel.z, 0.0, 0.999));
             file << ir << ' ' << ig << ' ' << ib << '\n';
         }
     }

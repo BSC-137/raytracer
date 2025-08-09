@@ -1,14 +1,24 @@
 #pragma once
+#include <memory>
 #include "ray.hpp"
+
+class Material; // forward declaration
 
 struct HitRecord {
     Vec3 point;
     Vec3 normal;
     double t;
-    Vec3 color;
+    bool front_face;
+    std::shared_ptr<Material> mat; // NEW
+
+    inline void set_face_normal(const Ray& r, const Vec3& outward_normal){
+        front_face = dot(r.direction, outward_normal) < 0;
+        normal = front_face ? outward_normal : -outward_normal;
+    }
 };
 
 class Hittable {
 public:
     virtual bool hit(const Ray& r, double t_min, double t_max, HitRecord& rec) const = 0;
+    virtual ~Hittable() = default;
 };

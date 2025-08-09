@@ -1,14 +1,14 @@
 #pragma once
-#include "hittable.hpp"
 #include <vector>
+#include <memory>
+#include "hittable.hpp"
 
 class HittableList : public Hittable {
 public:
-    std::vector<Hittable*> objects;
+    std::vector<std::shared_ptr<Hittable>> objects;
 
-    void add(Hittable* obj) {
-        objects.push_back(obj);
-    }
+    void clear() { objects.clear(); }
+    void add(std::shared_ptr<Hittable> obj) { objects.push_back(std::move(obj)); }
 
     bool hit(const Ray& r, double t_min, double t_max, HitRecord& rec) const override {
         HitRecord temp_rec;
@@ -22,7 +22,6 @@ public:
                 rec = temp_rec;
             }
         }
-
         return hit_anything;
     }
 };
