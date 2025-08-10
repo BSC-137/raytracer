@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <memory>
+#include <vector>
 #include "hittable.hpp"
 
 class HittableList : public Hittable {

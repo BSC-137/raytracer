@@ -5,11 +5,11 @@
 
 class Dielectric : public Material {
 public:
-    double ir; // index of refraction (e.g., 1.5)
+    double ir; // index of refraction (e.g., 1.5 for glass)
     explicit Dielectric(double index_of_refraction) : ir(index_of_refraction) {}
 
-    static double reflectance(double cos, double ref_idx){
-        // Schlick approximation
+    static double reflectance(double cos, double ref_idx) {
+        // Schlick approximation (average reflectance)
         double r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
         r0 = r0 * r0;
         return r0 + (1.0 - r0) * std::pow(1.0 - cos, 5.0);
@@ -17,7 +17,7 @@ public:
 
     bool scatter(const Ray& r_in, const HitRecord& rec,
                  Vec3& attenuation, Ray& scattered) const override {
-        attenuation = Vec3(1.0, 1.0, 1.0); // no absorption (clear glass)
+        attenuation = Vec3(1.0, 1.0, 1.0); // clear glass
         double refraction_ratio = rec.front_face ? (1.0 / ir) : ir;
 
         Vec3 unit_dir = normalize(r_in.direction);
