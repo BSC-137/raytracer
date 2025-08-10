@@ -21,7 +21,6 @@ public:
 
         double sqrt_d = std::sqrt(discriminant);
 
-        // Find nearest root in [t_min, t_max]
         double root = (-half_b - sqrt_d) / a;
         if (root < t_min || root > t_max) {
             root = (-half_b + sqrt_d) / a;
@@ -30,9 +29,15 @@ public:
 
         rec.t = root;
         rec.point = r.at(rec.t);
-        Vec3 outward_normal = (rec.point - center) / radius; // negative radius flips normal => hollow glass trick
+        Vec3 outward_normal = (rec.point - center) / radius;
         rec.set_face_normal(r, outward_normal);
         rec.mat = mat;
+        return true;
+    }
+
+    bool bounding_box(AABB& out_box) const override {
+        Vec3 r(radius, radius, radius);
+        out_box = AABB(center - r, center + r);
         return true;
     }
 };

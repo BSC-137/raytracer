@@ -24,4 +24,16 @@ public:
         }
         return hit_anything;
     }
+
+    bool bounding_box(AABB& out_box) const override {
+        if (objects.empty()) return false;
+        AABB temp;
+        bool first = true;
+        for (const auto& o : objects) {
+            if (!o->bounding_box(temp)) return false;
+            out_box = first ? temp : surrounding_box(out_box, temp);
+            first = false;
+        }
+        return true;
+    }
 };
